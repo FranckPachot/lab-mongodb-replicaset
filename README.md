@@ -88,6 +88,8 @@ To observe the effects of different write concerns on data consistency, execute:
 docker compose exec -it mongo1 mongosh -f /scripts/read-and-write.js
 
 ```
+run it on the primary if you don't want to account for the client-server latency.
+
 This writes to a document on the primary and immediately reads from the three nodes to see if the value is consistent. The network delay added on each node is 500 ms, so the round-trip time is 1000 ms.
 
 Setting the write concern to majority ensures consistency across nodes, albeit with some write latency. The output shows the values and elapsed times for reads and writes, demonstrates how replicas lag and shows stale values when not appropriately synchronized. This experiment highlights the critical balance between performance and consistency in distributed database systems.
