@@ -1,7 +1,7 @@
 let loopNumber = 0;
 
-// Default Write Concern: w = 1
-const writeConcern = { w: 1 };
+// Default Write Concern: w = 1, j: false
+const writeConcern = { w: "majority" };
 
 function padLeft(string, length) {
   return string.padStart(length);
@@ -21,7 +21,7 @@ function findPrimary(dbs) {
   return null;
 }
 
-function performOperations(db, nodeName) {
+function performOperations(db, nodeName, expectedValue) {
   const collection = db.getCollection("testCollection");
   
   try {
@@ -30,7 +30,7 @@ function performOperations(db, nodeName) {
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
     const readValue = document ? document.value : '';
-    const readOutput = `${padLeft(nodeName + ': ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
+    const readOutput = `${expectedValue==readValue?"✅":"🚫"} ${padLeft(nodeName + ': ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
     return { readOutput, document };
   } catch (error) {
     print(`Error in operations on ${nodeName}: ${error}`);
@@ -93,7 +93,7 @@ function main() {
       if (!db) {
         return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
       }
-      return performOperations(db.getDB("test"), name);
+      return performOperations(db.getDB("test"), name, loopNumber);
     });
 
     Promise.all(readPromises).then((results) => {
@@ -101,7 +101,7 @@ function main() {
       print(`${timestamp} ${writeOutput} ${readOutputs}`);
     });
 
-    sleep(5000);  // Sleep for 5 seconds
+    //sleep(5000);  // Sleep for 5 seconds
   }
 }
 
