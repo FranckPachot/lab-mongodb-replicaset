@@ -1,7 +1,18 @@
-let loopNumber = 0;
+ /*
+     Environment variables:
+      - w: write concern level (default: majority)
+ */
 
-// Default Write Concern: w = 1, j: false
-const writeConcern = { w: "majority" };
+ const connections = {
+   mongo1: 'mongodb://mongo1:27017/test',
+   mongo2: 'mongodb://mongo2:27017/test',
+   mongo3: 'mongodb://mongo3:27017/test',
+ };
+
+const readConcern =  process.env.r || 'local' // Default to 'local' if not defined
+const writeConcern = { w: process.env.w || 'majority' }; // Default to 'majority' if not defined
+
+let loopNumber = 0;
 
 function padLeft(string, length) {
   return string.padStart(length);
@@ -21,12 +32,11 @@ function findPrimary(dbs) {
   return null;
 }
 
-function performOperations(db, nodeName, expectedValue) {
+function performRead(db, nodeName, expectedValue) {
   const collection = db.getCollection("testCollection");
-  
   try {
     const readStart = Date.now();
-    const document = collection.findOne({ key: 'one' });
+    const document = collection.find({ key: 'one' }).readConcern(readConcern).limit(1).next();
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
     const readValue = document ? document.value : '';
@@ -39,11 +49,6 @@ function performOperations(db, nodeName, expectedValue) {
 }
 
 function main() {
-  const connections = {
-    mongo1: 'mongodb://mongo1:27017/test',
-    mongo2: 'mongodb://mongo2:27017/test',
-    mongo3: 'mongodb://mongo3:27017/test',
-  };
 
   const dbs = Object.entries(connections).reduce((acc, [name, uri]) => {
     const connectStart = Date.now();
@@ -52,8 +57,8 @@ function main() {
       acc[name] = mongo;
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
-      const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary' : 'secondary';
-      print(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) as ${role}`);
+      const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary  ' : 'secondary';
+      print(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) as ${role} (w: ${writeConcern.w} r: ${readConcern})`);
     } catch (e) {
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
@@ -74,10 +79,10 @@ function main() {
         const writeStart = Date.now();
         const collection = primaryDb.getCollection("testCollection");
         const updateResult = collection.updateOne(
-          { key: 'one' },
-          { $set: { value: loopNumber } },
-          { upsert: true, writeConcern }
-        );
+              { key: 'one' },
+              { $set: { value: loopNumber } },
+              { upsert: true , writeConcern }
+            );
         const writeEnd = Date.now();
         const writeDuration = writeEnd - writeStart;
         writeOutput = `write to primary: ${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
@@ -93,7 +98,7 @@ function main() {
       if (!db) {
         return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
       }
-      return performOperations(db.getDB("test"), name, loopNumber);
+      return performRead(db.getDB("test"), name, loopNumber);
     });
 
     Promise.all(readPromises).then((results) => {
@@ -101,7 +106,6 @@ function main() {
       print(`${timestamp} ${writeOutput} ${readOutputs}`);
     });
 
-    //sleep(5000);  // Sleep for 5 seconds
   }
 }
 
