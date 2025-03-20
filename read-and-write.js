@@ -1,8 +1,5 @@
 let loopNumber = 0;
 
-// Default Read Concern: "local"
-const readConcernLevel = "local";
-
 // Default Write Concern: w = 1
 const writeConcern = { w: 1 };
 
@@ -29,11 +26,11 @@ function performOperations(db, nodeName) {
   
   try {
     const readStart = Date.now();
-    const document = collection.findOne({ key: 'one' }, { readConcern: { level: readConcernLevel } });
+    const document = collection.findOne({ key: 'one' });
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
     const readValue = document ? document.value : '';
-    const readOutput = `${padLeft(`(${readDuration}ms) ${nodeName}: ${readValue}`, 30)}`;
+    const readOutput = `${padLeft(nodeName + ': ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
     return { readOutput, document };
   } catch (error) {
     print(`Error in operations on ${nodeName}: ${error}`);
@@ -55,11 +52,12 @@ function main() {
       acc[name] = mongo;
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
-      print(`Connected to ${name} (${connectDuration}ms)`);
+      const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary' : 'secondary';
+      print(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) as ${role}`);
     } catch (e) {
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
-      print(`Could not connect to ${name} (${connectDuration}ms): ${e}`);
+      print(`Could not connect to ${name} (${padLeft(connectDuration.toString(),5)}ms): ${e}`);
     }
     return acc;
   }, {});
@@ -67,12 +65,6 @@ function main() {
   while (true) {
     loopNumber++;
     const timestamp = (new Date()).toISOString();
-    const results = Object.entries(dbs).map(([name, db]) => {
-      if (!db) {
-        return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
-      }
-      return performOperations(db.getDB("test"), name);
-    });
 
     const primaryNode = findPrimary(dbs);
     let writeOutput = '';
@@ -88,7 +80,7 @@ function main() {
         );
         const writeEnd = Date.now();
         const writeDuration = writeEnd - writeStart;
-        writeOutput = `primary: ${primaryNode} write {"key":"one","value":${loopNumber}} (${writeDuration}ms)`;
+        writeOutput = `write to primary: ${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
       } catch (error) {
         writeOutput = `primary: ${primaryNode} write error`;
         print(`Error in write operation on ${primaryNode}: ${error}`);
@@ -97,12 +89,20 @@ function main() {
       writeOutput = 'write error: no primary';
     }
 
-    const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
-    print(`${timestamp} ${readOutputs} ${writeOutput}`);
+    const readPromises = Object.entries(dbs).map(async ([name, db]) => {
+      if (!db) {
+        return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
+      }
+      return performOperations(db.getDB("test"), name);
+    });
+
+    Promise.all(readPromises).then((results) => {
+      const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
+      print(`${timestamp} ${writeOutput} ${readOutputs}`);
+    });
 
     sleep(5000);  // Sleep for 5 seconds
   }
 }
 
 main();
-

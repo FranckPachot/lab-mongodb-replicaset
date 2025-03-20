@@ -56,3 +56,11 @@ Result: {
 }
 rs0 [direct: primary] test> 
 ```
+
+## Examples of read/write consistency
+
+```
+
+docker compose exec -it mongo1 mongosh -f /scripts/read-and-write.js
+
+```

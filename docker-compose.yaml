@@ -7,6 +7,7 @@ services:
       - 27017:27017
     volumes:
       - data1:/data/db
+      - .:/scripts
     cap_add:
       - NET_ADMIN
     command: |
@@ -22,6 +23,7 @@ services:
       - 27018:27017
     volumes:
       - data2:/data/db
+      - .:/scripts
     cap_add:
       - NET_ADMIN
     command: |
@@ -37,6 +39,7 @@ services:
       - 27019:27017
     volumes:
       - data3:/data/db
+      - .:/scripts
     cap_add:
       - NET_ADMIN
     command: |
@@ -46,7 +49,7 @@ services:
      '
 
   init-replica-set:
-    image: mongodb/mongodb-atlas-local
+    build: .
     depends_on:
       mongo1:
         condition: service_started
