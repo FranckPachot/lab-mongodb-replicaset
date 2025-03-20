@@ -1,0 +1,75 @@
+services:
+  mongo1:
+    build: .
+    hostname: mongo1
+    ports:
+      - 27017:27017
+    volumes:
+      - data1:/data/db
+    cap_add:
+      - NET_ADMIN
+    command: |
+     bash -xc '
+     tc qdisc add dev eth0 root netem delay 500ms ;
+     mongod --bind_ip_all --replSet rs0
+     '
+
+  mongo2:
+    build: .
+    hostname: mongo2
+    ports:
+      - 27018:27017
+    volumes:
+      - data2:/data/db
+    cap_add:
+      - NET_ADMIN
+    command: |
+     bash -xc '
+     tc qdisc add dev eth0 root netem delay 500ms ;
+     mongod --bind_ip_all --replSet rs0
+     '
+
+  mongo3:
+    build: .
+    hostname: mongo3
+    ports:
+      - 27019:27017
+    volumes:
+      - data3:/data/db
+    cap_add:
+      - NET_ADMIN
+    command: |
+     bash -xc '
+     tc qdisc add dev eth0 root netem delay 500ms ;
+     mongod --bind_ip_all --replSet rs0
+     '
+
+  init-replica-set:
+    image: mongodb/mongodb-atlas-local
+    depends_on:
+      mongo1:
+        condition: service_started
+      mongo2:
+        condition: service_started
+      mongo3:
+        condition: service_started
+    entrypoint: |
+      bash -xc '
+        until 
+        mongosh --host mongo1 --eval "rs.status()" 
+        do sleep 1
+        done;
+        mongosh --host mongo1 --eval "
+         rs.initiate( {_id: \"rs0\", members: [
+          {_id: 0, host: \"mongo1:27017\"},
+          {_id: 1, host: \"mongo2:27017\"},
+          {_id: 2, host: \"mongo3:27017\"}]
+         });
+        "
+      '
+
+volumes:
+  data1:
+  data2:
+  data3:
+
