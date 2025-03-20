@@ -48,7 +48,7 @@ function performRead(db, nodeName, expectedValue) {
   }
 }
 
-function main() {
+async function main() {
 
   const dbs = Object.entries(connections).reduce((acc, [name, uri]) => {
     const connectStart = Date.now();
@@ -100,11 +100,9 @@ function main() {
       }
       return performRead(db.getDB("test"), name, loopNumber);
     });
-
-    Promise.all(readPromises).then((results) => {
-      const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
-      print(`${timestamp} ${writeOutput} ${readOutputs}`);
-    });
+    const results = await Promise.all(readPromises);
+    const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
+    print(`${timestamp} ${writeOutput} ${readOutputs}`);
 
   }
 }
