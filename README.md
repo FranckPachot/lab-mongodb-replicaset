@@ -10,7 +10,7 @@ To initiate the cluster, use the following commands:
 
 docker compose up --build -d
 docker compose logs init-replica-set
-docker compose exec -it mongo1 mongosh
+docker compose exec -it mongo mongosh
 
 ```
 
@@ -85,7 +85,7 @@ rs0 [direct: primary] test>
 To observe the effects of different write concerns on data consistency, execute:
 ```
 
-docker compose exec -it mongo1 mongosh -f /scripts/read-and-write.js
+docker exec -it rs-mongo-1 mongosh -f /scripts/read-and-write.js
 
 ```
 run it on the primary if you don't want to account for the client-server latency.
@@ -102,7 +102,10 @@ Without waiting on other nodes during writes (with environment variable `w=0`, w
 
 <img width="1418" alt="image" src="https://github.com/user-attachments/assets/ffdf5ccf-d7b3-473b-912d-a90d302280d4" />
 
+Those screenshots were using a 500ms fake latency (so 1s RTT)
 
+
+To test resilience, you can pause or stop docker containers. Do not start mongosh on the one you will stop, and do not read from the one you stopped if you don't wait to wait 
 
 
 

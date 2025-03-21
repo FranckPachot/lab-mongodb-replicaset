@@ -4,11 +4,12 @@
  */
 
  // this will be read in order (I think) so place the multi-host first if you want to use it for writes
+ // the host names take the project name (in .env) and the service name (in docker-compose.yaml) and the replica number
  const connections = {
-   "mongo*": 'mongodb://mongo1:27017,mongo2:27017,mongo3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred',
-   "mongo1":   'mongodb://mongo1:27017/test',
-   "mongo2": 'mongodb://mongo2:27017/test',
-   "mongo3": 'mongodb://mongo3:27017/test',
+   "mongo*": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred',
+   "mongo1": 'mongodb://rs-mongo-1:27017/test',
+   "mongo2": 'mongodb://rs-mongo-2:27017/test',
+   "mongo3": 'mongodb://rs-mongo-3:27017/test',
  };
 
 const readConcern =  process.env.r || 'local' // Default to 'local' if not defined
@@ -27,7 +28,7 @@ function findPrimary(dbs) {
         return name;
       }
     } catch (error) {
-      print(`Error checking primary status on ${name}: ${error}`);
+      print(`\nError checking primary status on ${name}: ${error}`);
     }
   }
   return null;
@@ -41,12 +42,12 @@ function performRead(db, nodeName, expectedValue) {
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
     const readValue = document ? document.value : '';
-    const readOutput = `${expectedValue==readValue?"✅":"🚫"} ${padLeft(nodeName + ': ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
+    const readOutput = `${expectedValue>=readValue?"✅":"🚫"} ${padLeft(nodeName + '= ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
     return { readOutput, document };
   } catch (error) {
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
-    print(`Error in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),5)}ms)`);
+    print(`\nError in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),5)}ms)`);
     return { readOutput: padLeft(`(${0}ms) ${nodeName}: error`, 30), document: null };
   }
 }
@@ -66,7 +67,7 @@ async function main() {
     } catch (e) {
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
-      print(`Could not connect to ${name} (${padLeft(connectDuration.toString(),5)}ms): ${e}`);
+      print(`\nCould not connect to ${name} (${padLeft(connectDuration.toString(),5)}ms): ${e}`);
     }
     return acc;
   }, {});
@@ -80,9 +81,9 @@ async function main() {
 
     let writeOutput = '';
     if (primaryNode) {
+      const writeStart = Date.now();
       const primaryDb = dbs[primaryNode].getDB("test");
       try {
-        const writeStart = Date.now();
         const collection = primaryDb.getCollection("testCollection");
         const updateResult = collection.updateOne(
               { key: 'one' },
@@ -91,15 +92,15 @@ async function main() {
             );
         const writeEnd = Date.now();
         const writeDuration = writeEnd - writeStart;
-        writeOutput = `write to : ${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
+        writeOutput = `${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
       } catch (error) {
         const writeEnd = Date.now();
         const writeDuration = writeEnd - writeStart;
         writeOutput = `primary: ${primaryNode} write error`;
-        print(`Error in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),5)}ms)`);
+        print(`\nError in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),5)}ms)`);
       }
     } else {
-      writeOutput = 'write error: no primary';
+      writeOutput = '\nwrite error: no primary';
     }
 
     const readPromises = Object.entries(dbs).map(async ([name, db]) => {
@@ -110,7 +111,7 @@ async function main() {
     });
     const results = await Promise.all(readPromises);
     const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
-    print(`${timestamp} ${writeOutput} ${readOutputs}`);
+    print(`${timestamp} Write to: ${writeOutput} Read from: ${readOutputs}`);
 
   }
 }

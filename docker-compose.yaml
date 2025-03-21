@@ -1,73 +1,42 @@
 services:
 
-  mongo1:
+  mongo:
     build: .
-    hostname: mongo1
-    ports:
-      - 27017:27017
+    expose:
+      - "27017:20017"
+    #ports:
+    #  - 27017-27100:27017
     volumes:
-      - data1:/data/db
-      - .:/scripts
+      - .:/scripts:ro
     cap_add:
       - NET_ADMIN
     command: |
      bash -xc '
-     tc qdisc add dev eth0 root netem delay 500ms ;
+     tc qdisc add dev eth0 root netem delay 10ms ;
      mongod --bind_ip_all --replSet rs0
      '
+    deploy:
+      replicas: 3
 
-  mongo2:
+  mongosh:
     build: .
-    hostname: mongo2
-    ports:
-      - 27018:27017
-    volumes:
-      - data2:/data/db
-      - .:/scripts
-    cap_add:
-      - NET_ADMIN
-    command: |
-     bash -xc '
-     tc qdisc add dev eth0 root netem delay 500ms ;
-     mongod --bind_ip_all --replSet rs0
-     '
-
-  mongo3:
-    build: .
-    hostname: mongo3
-    ports:
-      - 27019:27017
-    volumes:
-      - data3:/data/db
-      - .:/scripts
-    cap_add:
-      - NET_ADMIN
-    command: |
-     bash -xc '
-     tc qdisc add dev eth0 root netem delay 500ms ;
-     mongod --bind_ip_all --replSet rs0
-     '
 
   init-replica-set:
     build: .
     depends_on:
-      mongo1:
-        condition: service_started
-      mongo2:
-        condition: service_started
-      mongo3:
+      mongo:
         condition: service_started
     entrypoint: |
       bash -xc '
-        until 
-        mongosh --host mongo1 --eval "rs.status()" 
-        do sleep 1
-        done;
-        mongosh --host mongo1 --eval "
+        #until 
+        #mongosh --host mongo --eval "rs.status()" 
+        #do sleep 1
+        #done;
+        mongosh --host mongo --eval "
          rs.initiate( {_id: \"rs0\", members: [
-          {_id: 0, priority: 3, host: \"mongo1:27017\"},
-          {_id: 1, priority: 2, host: \"mongo2:27017\"},
-          {_id: 2, priority: 1, host: \"mongo3:27017\"}]
+          {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME}-mongo-1:27017\"},
+          {_id: 1, priority: 2, host: \"${COMPOSE_PROJECT_NAME}-mongo-2:27017\"},
+          {_id: 2, priority: 1, host: \"${COMPOSE_PROJECT_NAME}-mongo-3:27017\"}]
          });
         "
       '
