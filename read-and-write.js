@@ -1,7 +1,3 @@
-  /*
-     Environment variables:
-      - w: write concern level (default: majority)
- */
 
  // this will be read in order (I think) so place the multi-host first if you want to use it for writes
  // the host names take the project name (in .env) and the service name (in docker-compose.yaml) and the replica number
@@ -12,10 +8,12 @@
   "mongo3": 'mongodb://rs-mongo-3:27017/test?w=majority',
 };
 
+// formatting
 function padLeft(string, length) {
  return string.padStart(length);
 }
 
+// find the first connection string that has a primary available
 function findPrimary(dbs) {
  for (const [name, db] of Object.entries(dbs)) {
    try {
@@ -30,6 +28,7 @@ function findPrimary(dbs) {
  return null;
 }
 
+// perform a read operation on a given node and compare the result to the expected value
 function performRead(db, nodeName, expectedValue) {
  const collection = db.getCollection("testCollection");
  const readStart = Date.now();
@@ -48,6 +47,7 @@ function performRead(db, nodeName, expectedValue) {
  }
 }
 
+// connect and loop forever writing to the primary and reding from all nodes
 async function main() {
 
  const dbs = Object.entries(connections).reduce((acc, [name, uri]) => {
@@ -97,7 +97,7 @@ async function main() {
    } else {
      writeOutput = '\nwrite error: no primary';
    }
-
+   // after the write, read from all nodes
    const readPromises = Object.entries(dbs).map(async ([name, db]) => {
      if (!db) {
        return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
