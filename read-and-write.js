@@ -3,16 +3,17 @@
       - w: write concern level (default: majority)
  */
 
+ // this will be read in order (I think) so place the multi-host first if you want to use it for writes
  const connections = {
-   mongo1: 'mongodb://mongo1:27017/test',
-   mongo2: 'mongodb://mongo2:27017/test',
-   mongo3: 'mongodb://mongo3:27017/test',
+   "mongo*": 'mongodb://mongo1:27017,mongo2:27017,mongo3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred',
+   "mongo1":   'mongodb://mongo1:27017/test',
+   "mongo2": 'mongodb://mongo2:27017/test',
+   "mongo3": 'mongodb://mongo3:27017/test',
  };
 
 const readConcern =  process.env.r || 'local' // Default to 'local' if not defined
 const writeConcern = { w: process.env.w || 'majority' }; // Default to 'majority' if not defined
 
-let loopNumber = 0;
 
 function padLeft(string, length) {
   return string.padStart(length);
@@ -34,8 +35,8 @@ function findPrimary(dbs) {
 
 function performRead(db, nodeName, expectedValue) {
   const collection = db.getCollection("testCollection");
+  const readStart = Date.now();
   try {
-    const readStart = Date.now();
     const document = collection.find({ key: 'one' }).readConcern(readConcern).limit(1).next();
     const readEnd = Date.now();
     const readDuration = readEnd - readStart;
@@ -43,13 +44,16 @@ function performRead(db, nodeName, expectedValue) {
     const readOutput = `${expectedValue==readValue?"✅":"🚫"} ${padLeft(nodeName + ': ', 6)}${padLeft(readValue.toString(), 3)} (${padLeft(readDuration.toString(),5)}ms)`;
     return { readOutput, document };
   } catch (error) {
-    print(`Error in operations on ${nodeName}: ${error}`);
+    const readEnd = Date.now();
+    const readDuration = readEnd - readStart;
+    print(`Error in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),5)}ms)`);
     return { readOutput: padLeft(`(${0}ms) ${nodeName}: error`, 30), document: null };
   }
 }
 
 async function main() {
 
+  print(`Environment variables: (w: ${writeConcern.w} r: ${readConcern})`);
   const dbs = Object.entries(connections).reduce((acc, [name, uri]) => {
     const connectStart = Date.now();
     try {
@@ -58,7 +62,7 @@ async function main() {
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
       const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary  ' : 'secondary';
-      print(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) as ${role} (w: ${writeConcern.w} r: ${readConcern})`);
+      print(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) where ${role} is available`);
     } catch (e) {
       const connectEnd = Date.now();
       const connectDuration = connectEnd - connectStart;
@@ -67,10 +71,12 @@ async function main() {
     return acc;
   }, {});
 
+  let loopNumber = 0;
   while (true) {
     loopNumber++;
     const timestamp = (new Date()).toISOString();
 
+    // gets the connection strin where a primary is available
     const primaryNode = findPrimary(dbs);
     let writeOutput = '';
     if (primaryNode) {
@@ -85,10 +91,12 @@ async function main() {
             );
         const writeEnd = Date.now();
         const writeDuration = writeEnd - writeStart;
-        writeOutput = `write to primary: ${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
+        writeOutput = `write to : ${primaryNode} {"key":"one","value":${padLeft(loopNumber.toString(),3)}} (${padLeft(writeDuration.toString(),5)}ms)`;
       } catch (error) {
+        const writeEnd = Date.now();
+        const writeDuration = writeEnd - writeStart;
         writeOutput = `primary: ${primaryNode} write error`;
-        print(`Error in write operation on ${primaryNode}: ${error}`);
+        print(`Error in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),5)}ms)`);
       }
     } else {
       writeOutput = 'write error: no primary';
