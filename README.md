@@ -10,6 +10,7 @@ To initiate the cluster, use the following commands:
 
 docker compose up --build -d
 docker compose logs init-replica-set
+
 docker compose exec -it mongo mongosh
 
 ```
@@ -92,13 +93,24 @@ run it on the primary if you don't want to account for the client-server latency
 
 This writes to a document on the primary and immediately reads from the three nodes to see if the value is consistent. The network delay added on each node is 500 ms, so the round-trip time is 1000 ms.
 
-Setting the write concern to majority ensures consistency across nodes, albeit with some write latency. The output shows the values and elapsed times for reads and writes, demonstrates how replicas lag and shows stale values when not appropriately synchronized. This experiment highlights the critical balance between performance and consistency in distributed database systems.
+Setting the write concern to majority ensures consistency across nodes, albeit with some write latency. 
+It can be set in the connection string in (read-and-write.js):
+```
+ const connections = {
+  "mongo*": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=true&w=majority',
+  "mongo1": 'mongodb://rs-mongo-1:27017/test?w=majority',
+  "mongo2": 'mongodb://rs-mongo-2:27017/test?w=majority',
+  "mongo3": 'mongodb://rs-mongo-3:27017/test?w=majority',
+};
+```
 
-With the write concern set to the majority (with environment variable `w=majority` which sets the write concern to `{ w: majority }`), the values are consistent in all nodes, but the writes involve two round-trip latency:
+The output shows the values and elapsed times for reads and writes, demonstrates how replicas lag and shows stale values when not appropriately synchronized. This experiment highlights the critical balance between performance and consistency in distributed database systems.
+
+With the write concern set to the majority (`w=majority`), the values are consistent in all nodes, but the writes involve two round-trip latency:
 
 <img width="1393" alt="image" src="https://github.com/user-attachments/assets/aaa67e45-6e8b-45d7-a64a-4c108361e202" />
 
-Without waiting on other nodes during writes (with environment variable `w=0`, which sets the write concern to `{ w: 0 }`) the replicas lag and show stale values but writes do not involve waiting for network synchronization:
+Without waiting on other nodes during writes (with `w=0`) the replicas lag and show stale values but writes do not involve waiting for network synchronization:
 
 <img width="1418" alt="image" src="https://github.com/user-attachments/assets/ffdf5ccf-d7b3-473b-912d-a90d302280d4" />
 
