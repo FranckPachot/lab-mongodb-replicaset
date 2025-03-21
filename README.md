@@ -1,8 +1,10 @@
-# Lab with MongoDB Replica Set and fake network latency
+# Lab with MongoDB Replica Set and Fake Network Latency
 
-This cluster adds fake network latency (using `tc`) to learn about read and write concerns without having to deploy a cluster over multiple regions.
+In this lab, we explore the functionality of a MongoDB replica set under simulated network latency conditions using the `tc` tool. This setup allows developers and database administrators to understand read and write concerns without needing to deploy a geographically distributed cluster.
 
-## Start it
+## Starting the Cluster
+
+To initiate the cluster, use the following commands:
 
 ```
 
@@ -12,13 +14,28 @@ docker compose exec -it mongo1 mongosh
 
 ```
 
-`docker compose logs` shows the latency during hearbeats,: `pingMs: 1001, lastHeartbeatMessage`
+These commands will build and start your Docker containers while initializing the replica set.
 
-For a latency of 500ms added on all nodes, the Round Trip Time is 1000ms
+The command `docker compose logs init-replica-set` helps you monitor the initialization process and shows latency during heartbeats, such as `pingMs: 1001`. 
+With a configured latency of 500ms on each node, the total Round Trip Time (RTT) reaches 1000ms.
 
-## Test with timeout
+## Testing Write Concerns with Timeout
 
-You can test with a write concern of majority and timeout lower than the RTT:
+To test write concerns effectively, particularly the majority write concern, you can run the following query:
+```
+db.myCollection.insertOne({name: "example"}, {writeConcern: {w: "majority", wtimeout: 5000}});
+```
+
+This successfully inserts a document into `myCollection` with a write concern of majority and a timeout of 5000 milliseconds, sufficient for the current RTT. 
+However, if you reduce the timeout to 1000 milliseconds:
+```
+db.myCollection.insertOne({name: "example"}, {writeConcern: {w: "majority", wtimeout: 1000}});
+```
+
+You will encounter a `MongoWriteConcernError`, indicating that the operation timed out waiting for replication. 
+This illustrates the importance of understanding the relationship between write concerns and network latency.
+
+Here is the full output:
 ```
 
 rs0 [direct: primary] test> db.myCollection.insertOne({name: "example"}, {writeConcern: {w: "majority", wtimeout: 5000}});
@@ -63,20 +80,25 @@ Result: {
 rs0 [direct: primary] test> 
 ```
 
-## Examples of read/write consistency
+## Analyzing Read/Write Consistency
 
+To observe the effects of different write concerns on data consistency, execute:
 ```
 
 docker compose exec -it mongo1 mongosh -f /scripts/read-and-write.js
 
 ```
+run it on the primary if you don't want to account for the client-server latency.
 
-With the write concern set to majority (with environment variable `w=majority`), the values are consistent in all nodes, but with some write latency:
+This writes to a document on the primary and immediately reads from the three nodes to see if the value is consistent. The network delay added on each node is 500 ms, so the round-trip time is 1000 ms.
 
-<img width="1435" alt="image" src="https://github.com/user-attachments/assets/be8acbb5-aae6-4679-b712-b2b5ce284e4e" />
+Setting the write concern to majority ensures consistency across nodes, albeit with some write latency. The output shows the values and elapsed times for reads and writes, demonstrates how replicas lag and shows stale values when not appropriately synchronized. This experiment highlights the critical balance between performance and consistency in distributed database systems.
 
+With the write concern set to the majority (with environment variable `w=majority` which sets the write concern to `{ w: majority }`), the values are consistent in all nodes, but the writes involve two round-trip latency:
 
-Without waiting on other nodes during writes, the replicas lag and show stale values:
+<img width="1393" alt="image" src="https://github.com/user-attachments/assets/aaa67e45-6e8b-45d7-a64a-4c108361e202" />
+
+Without waiting on other nodes during writes (with environment variable `w=0`, which sets the write concern to `{ w: 0 }`) the replicas lag and show stale values but writes do not involve waiting for network synchronization:
 
 <img width="1418" alt="image" src="https://github.com/user-attachments/assets/ffdf5ccf-d7b3-473b-912d-a90d302280d4" />
 
