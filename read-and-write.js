@@ -72,12 +72,12 @@ async function main() {
   }, {});
 
   let loopNumber = 0;
+    // gets the connection strin where a primary is available
+    const primaryNode = findPrimary(dbs);
   while (true) {
     loopNumber++;
     const timestamp = (new Date()).toISOString();
 
-    // gets the connection strin where a primary is available
-    const primaryNode = findPrimary(dbs);
     let writeOutput = '';
     if (primaryNode) {
       const primaryDb = dbs[primaryNode].getDB("test");
