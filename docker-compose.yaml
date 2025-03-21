@@ -18,9 +18,6 @@ services:
     deploy:
       replicas: 3
 
-  mongosh:
-    build: .
-
   init-replica-set:
     build: .
     depends_on:
