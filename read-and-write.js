@@ -71,6 +71,9 @@ async function main() {
  let loopNumber = 0;
    // gets the connection strin where a primary is available
    const primaryNode = findPrimary(dbs);
+   const primaryDb = dbs[primaryNode].getDB("test");
+   const collection = primaryDb.getCollection("testCollection");
+   collection.updateOne( { key: 'one' }, { $set: { value: loopNumber } }, { upsert: true });
  while (true) {
    loopNumber++;
    const timestamp = (new Date()).toISOString();
@@ -78,17 +81,16 @@ async function main() {
    let writeOutput = '';
    if (primaryNode) {
      const writeStart = Date.now();
-     const primaryDb = dbs[primaryNode].getDB("test");
      try {
-       const collection = primaryDb.getCollection("testCollection");
-       const updateResult = collection.updateOne(
-             { key: 'one' },
-             { $set: { value: loopNumber } },
-             { upsert: true }
-           );
+       const updateResult = collection.findOneAndUpdate(
+        { key: 'one', },
+        { $set: { value: loopNumber } },
+        { upsert: true , returnDocument: 'before'}
+       );
        const writeEnd = Date.now();
        const writeDuration = writeEnd - writeStart;
-       writeOutput = `${loopNumber} to ${primaryNode} (${padLeft(writeDuration.toString(),3)}ms)`;
+       const previousValue=updateResult.value ? updateResult.value : 0;
+       writeOutput = `${loopNumber} to ${primaryNode} ${previousValue==loopNumber-1?"✅":"🚫"}(${padLeft(writeDuration.toString(),3)}ms)`;
      } catch (error) {
        const writeEnd = Date.now();
        const writeDuration = writeEnd - writeStart;
@@ -100,10 +102,9 @@ async function main() {
    }
    // after the write, read from all nodes
    const readPromises = Object.entries(dbs).map(async ([name, db]) => {
-     if (!db) {
-       return { readOutput: padLeft(`(${0}ms) ${name}: error`, 30), document: null };
+     if (db) {
+      return performRead(db.getDB("test"), name, loopNumber);
      }
-     return performRead(db.getDB("test"), name, loopNumber);
    });
    const results = await Promise.all(readPromises);
    const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
