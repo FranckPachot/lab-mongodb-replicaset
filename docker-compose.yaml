@@ -4,7 +4,7 @@ services:
     build: .
     expose:
       - "27017:20017"
-    ports:
+    #ports:
     #  - 27017-27100:27017
     volumes:
       - .:/scripts:ro
