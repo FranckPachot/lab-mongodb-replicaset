@@ -7,7 +7,7 @@
   "2️⃣": 'mongodb://rs-mongo-2:27017/test?directConnection=true&connectTimeoutMS=9000&serverSelectionTimeoutMS=2000&socketTimeoutMS=1500&w=majority',
   "3️⃣": 'mongodb://rs-mongo-3:27017/test?directConnection=true&connectTimeoutMS=9000&serverSelectionTimeoutMS=2000&socketTimeoutMS=1500&w=majority',
 };
-print(connections);
+console.log(connections);
 
 // formatting
 function padLeft(string, length) {
@@ -23,7 +23,7 @@ function findPrimary(dbs) {
        return name;
      }
    } catch (error) {
-     print(`\nError checking primary status on ${name}: ${error}`);
+     console.error(`Error checking primary status on ${name}: ${error}`);
    }
  }
  return null;
@@ -43,8 +43,10 @@ function performRead(db, nodeName, expectedValue) {
  } catch (error) {
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
-   print(`\nError in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),3)}ms)`);
-   return { readOutput: padLeft(`(${readDuration}ms) ${nodeName}: error`, 30), document: null };
+   console.error(`Error in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),3)}ms)`);
+   const readOutput = `${padLeft("", expectedValue.toString().length)} from ${nodeName} ⛔️(${padLeft(readDuration.toString(),3)}ms)`;
+   const document = null;
+   return { readOutput, document };
  }
 }
 
@@ -59,11 +61,11 @@ async function main() {
      const connectEnd = Date.now();
      const connectDuration = connectEnd - connectStart;
      const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary  ' : 'secondary';
-     print(`Connected to ${name} (${padLeft(connectDuration.toString(),3)}ms) where ${role} is available`);
+     console.log(`Connected to ${name} (${padLeft(connectDuration.toString(),3)}ms) where ${role} is available`);
    } catch (e) {
      const connectEnd = Date.now();
      const connectDuration = connectEnd - connectStart;
-     print(`\nCould not connect to ${name} (${padLeft(connectDuration.toString(),3)}ms): ${e}`);
+     console.error(`Could not connect to ${name} (${padLeft(connectDuration.toString(),3)}ms): ${e}`);
    }
    return acc;
  }, {});
@@ -95,10 +97,10 @@ async function main() {
        const writeEnd = Date.now();
        const writeDuration = writeEnd - writeStart;
        writeOutput = `primary: ${primaryNode} write error`;
-       print(`\nError in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),3)}ms)`);
+       console.error(`Error in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),3)}ms)`);
      }
    } else {
-     writeOutput = '\nwrite error: no primary';
+     writeOutput = 'write error: no primary';
    }
    // after the write, read from all nodes
    const readPromises = Object.entries(dbs).map(async ([name, db]) => {
@@ -108,7 +110,7 @@ async function main() {
    });
    const results = await Promise.all(readPromises);
    const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
-   print(`${timestamp} Write ${writeOutput} Read ${readOutputs}`);
+   console.log(`${timestamp} Write ${writeOutput} Read ${readOutputs}`);
 
  }
 }
