@@ -2,11 +2,12 @@
  // this will be read in order (I think) so place the multi-host first if you want to use it for writes
  // the host names take the project name (in .env) and the service name (in docker-compose.yaml) and the replica number
  const connections = {
-  "mongo*": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=true&w=majority',
-  "mongo1": 'mongodb://rs-mongo-1:27017/test?directConnection=true&w=majority',
-  "mongo2": 'mongodb://rs-mongo-2:27017/test?directConnection=true&w=majority',
-  "mongo3": 'mongodb://rs-mongo-3:27017/test?directConnection=true&w=majority',
+  "🔢": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=true&w=majority',
+  "1️⃣": 'mongodb://rs-mongo-1:27017/test?directConnection=true&connectTimeoutMS=9000&serverSelectionTimeoutMS=2000&socketTimeoutMS=1500&w=majority',
+  "2️⃣": 'mongodb://rs-mongo-2:27017/test?directConnection=true&connectTimeoutMS=9000&serverSelectionTimeoutMS=2000&socketTimeoutMS=1500&w=majority',
+  "3️⃣": 'mongodb://rs-mongo-3:27017/test?directConnection=true&connectTimeoutMS=9000&serverSelectionTimeoutMS=2000&socketTimeoutMS=1500&w=majority',
 };
+print(connections);
 
 // formatting
 function padLeft(string, length) {
@@ -37,13 +38,13 @@ function performRead(db, nodeName, expectedValue) {
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
    const readValue = document ? document.value : '';
-   const readOutput = `${padLeft(readValue.toString(), expectedValue.toString().length)} from ${padLeft(nodeName, 6)} ${expectedValue<=readValue?"✅":"🚫"}(${padLeft(readDuration.toString(),3)}ms)`;
+   const readOutput = `${padLeft(readValue.toString(), expectedValue.toString().length)} from ${nodeName} ${expectedValue<=readValue?"✅":"🚫"}(${padLeft(readDuration.toString(),3)}ms)`;
    return { readOutput, document };
  } catch (error) {
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
    print(`\nError in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),3)}ms)`);
-   return { readOutput: padLeft(`(${0}ms) ${nodeName}: error`, 30), document: null };
+   return { readOutput: padLeft(`(${readDuration}ms) ${nodeName}: error`, 30), document: null };
  }
 }
 
