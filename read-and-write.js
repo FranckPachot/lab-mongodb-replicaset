@@ -38,13 +38,13 @@ function performRead(db, nodeName, expectedValue) {
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
    const readValue = document ? document.value : '';
-   const readOutput = `${padLeft(readValue.toString(), expectedValue.toString().length)} from ${nodeName} ${expectedValue<=readValue?"✅":"🚫"}(${padLeft(readDuration.toString(),3)}ms)`;
+   const readOutput = `${padLeft(readValue.toString(), expectedValue.toString().length)} from ${nodeName} ${expectedValue<=readValue?"✅":"🚫"}(${padLeft(readDuration.toString(),5)}ms)`;
    return { readOutput, document };
  } catch (error) {
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
-   console.error(`Error in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),3)}ms)`);
-   const readOutput = `${padLeft("", expectedValue.toString().length)} from ${nodeName} ⛔️(${padLeft(readDuration.toString(),3)}ms)`;
+   console.error(`Error in read operation from ${nodeName}: ${error} (${padLeft(readDuration.toString(),5)}ms)`);
+   const readOutput = `${padLeft("", expectedValue.toString().length)} from ${nodeName} ⛔️(${padLeft(readDuration.toString(),5)}ms)`;
    const document = null;
    return { readOutput, document };
  }
@@ -61,23 +61,22 @@ async function main() {
      const connectEnd = Date.now();
      const connectDuration = connectEnd - connectStart;
      const role = mongo.getDB('admin').runCommand({ isMaster: 1 }).ismaster ? 'primary  ' : 'secondary';
-     console.log(`Connected to ${name} (${padLeft(connectDuration.toString(),3)}ms) where ${role} is available`);
+     console.log(`Connected to ${name} (${padLeft(connectDuration.toString(),5)}ms) where ${role} is available`);
    } catch (e) {
      const connectEnd = Date.now();
      const connectDuration = connectEnd - connectStart;
-     console.error(`Could not connect to ${name} (${padLeft(connectDuration.toString(),3)}ms): ${e}`);
+     console.error(`Could not connect to ${name} (${padLeft(connectDuration.toString(),5)}ms): ${e}`);
    }
    return acc;
  }, {});
 
- let loopNumber = 0;
+ let loopNumber = 1;
    // gets the connection strin where a primary is available
    const primaryNode = findPrimary(dbs);
    const primaryDb = dbs[primaryNode].getDB("test");
    const collection = primaryDb.getCollection("testCollection");
-   collection.updateOne( { key: 'one' }, { $set: { value: loopNumber } }, { upsert: true });
+   collection.updateOne( { key: 'one' }, { $set: { value: 0 } }, { upsert: true });
  while (true) {
-   loopNumber++;
    const timestamp = (new Date()).toISOString();
 
    let writeOutput = '';
@@ -92,12 +91,14 @@ async function main() {
        const writeEnd = Date.now();
        const writeDuration = writeEnd - writeStart;
        const previousValue=updateResult.value ? updateResult.value : 0;
-       writeOutput = `${loopNumber} to ${primaryNode} ${previousValue==loopNumber-1?"✅":"🚫"}(${padLeft(writeDuration.toString(),3)}ms)`;
+       writeOutput = `${loopNumber} to ${primaryNode} ${previousValue==loopNumber-1?"✅":"🚫"}(${padLeft(writeDuration.toString(),5)}ms)`;
+       loopNumber++;
      } catch (error) {
        const writeEnd = Date.now();
        const writeDuration = writeEnd - writeStart;
        writeOutput = `primary: ${primaryNode} write error`;
-       console.error(`Error in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),3)}ms)`);
+       writeOutput = `${padLeft("",loopNumber.toString().length)} to ${primaryNode} ⛔️(${padLeft(writeDuration.toString(),5)}ms)`;
+       console.error(`Error in write operation on ${primaryNode}: ${error} (${padLeft(writeDuration.toString(),5)}ms)`);
      }
    } else {
      writeOutput = 'write error: no primary';
@@ -105,7 +106,7 @@ async function main() {
    // after the write, read from all nodes
    const readPromises = Object.entries(dbs).map(async ([name, db]) => {
      if (db) {
-      return performRead(db.getDB("test"), name, loopNumber);
+      return performRead(db.getDB("test"), name, loopNumber-1);
      }
    });
    const results = await Promise.all(readPromises);
