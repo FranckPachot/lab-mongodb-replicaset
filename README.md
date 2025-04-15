@@ -119,5 +119,61 @@ Those screenshots were using a 500ms fake latency (so 1s RTT)
 
 To test resilience, you can pause or stop docker containers. Do not start mongosh on the one you will stop, and do not read from the one you stopped if you don't wait to wait 
 
+## Some commands to check the status
+
+## Status
+
+Check Which one is the primary
+```
+
+docker compose exec -it mongo mongosh local --eval 'db.hello()'
+
+```
+
+## Reconfigure
+
+Add two new nodes
+```
+
+docker compose up -d --scale mongo=5
+# connect to the primary
+docker compose exec -it mongo mongosh "mongodb://mongo?replicaSet=rs0"
+
+db.hello()
+c=rs.conf()
+print(c)
+c.members.push( {_id: 3, priority: 1, host: "rs-mongo-4:27017"} )
+c.members.push( {_id: 4, priority: 1, host: "rs-mongo-5:27017"} )
+rs.reconfig(c)
+
+db.hello()
+
+```
+
+Increase the priority of the third node so that it becomes the primary
+
+```
+docker compose exec -it mongo mongosh "mongodb://mongo?replicaSet=rs0"
+
+c=rs.conf()
+print(c)
+c.members[2].priority=5
+rs.reconfig(c)
+
+```
+
+## OpLog
+
+Look at the last operations in the OpLog and Replication lag:
+```
+
+for n in rs-mongo-{1..3}
+do
+docker exec -it $n mongosh local --eval 'db.oplog.rs.find().sort({ts:-1}).limit(1)'
+docker exec -it $n mongosh local --eval 'rs.printReplicationInfo()'
+done 
+docker compose exec -it mongo mongosh local --eval 'rs.printSecondaryReplicationInfo()'
+
+```
 
 
