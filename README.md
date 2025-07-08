@@ -83,6 +83,10 @@ rs0 [direct: primary] test>
 
 ## Analyzing Read/Write Consistency
 
+The program `read-and-write.js` first establishes multiple connections: one to the entire replica set using a connection string that lists all members, and individual direct connections to each replica set member (primary and secondaries). In its main loop, the program always writes the next incrementing value to the current primary node first. Immediately after each write, it performs read operations from all nodes (the replica set and each member individually). All read operations are issued in parallel. This order—write to the primary, then read from all—is repeated continuously, enabling the program to observe how quickly each node reflects the latest written value and to measure any replication lag.
+
+The program uses strong write concerns (`w=majority`), ensuring that a write is only considered successful once it has been acknowledged by the majority of the replica set nodes. For read concerns, the connection string for the replica set uses `readPreference=secondaryPreferred`, which attempts to read from a secondary node if possible (otherwise from the primary), while the direct connections default to reading from the node they are connected to. This combination demonstrates how different read and write concerns affect data consistency and visibility in a MongoDB replica set, and the impact on performance with a fake network latency.
+
 To observe the effects of different write concerns on data consistency, execute:
 ```
 
