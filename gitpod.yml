@@ -4,7 +4,7 @@ tasks:
         
     command: |  
       # Start PostgreSQL (single line)  
-      docker compose docker compose up --build
+      docker compose up --build
   
 ports:  
   - port: 27017  
