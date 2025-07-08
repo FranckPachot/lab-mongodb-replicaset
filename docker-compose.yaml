@@ -9,11 +9,13 @@ services:
     volumes:
       - .:/scripts:ro
     cap_add:
-      - NET_ADMIN
+      - NET_ADMIN   # for tc
+      - SYS_PTRACE  # for strace
+    # inject 100ms network latency and 50ms disk sync latency  
     command: |
      bash -xc '
      tc qdisc add dev eth0 root netem delay 100ms ;
-     mongod --bind_ip_all --replSet rs0 -logpath /var/log/mongod
+     strace -e inject=fdatasync:delay_enter=50000 -f -Te trace=fdatasync -o /dev/null mongod --bind_ip_all --replSet rs0 --logpath /var/log/mongod
      '
     deploy:
       replicas: 3
@@ -25,7 +27,7 @@ services:
         condition: service_started
     entrypoint: |
       bash -xc '
-        mongosh --host mongo --eval "
+        sleep 5 ; mongosh --host mongo --eval "
          rs.initiate( {_id: \"rs0\", members: [
           {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME}-mongo-1:27017\"},
           {_id: 1, priority: 2, host: \"${COMPOSE_PROJECT_NAME}-mongo-2:27017\"},
@@ -44,5 +46,5 @@ services:
       - .:/scripts:ro
     entrypoint: |
       bash -xc '
-        mongosh --host mongo mongosh -f /scripts/read-and-write.js
+        sleep 10 ; mongosh --host mongo mongosh -f /scripts/read-and-write.js
       '
