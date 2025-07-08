@@ -13,7 +13,7 @@ services:
     command: |
      bash -xc '
      tc qdisc add dev eth0 root netem delay 100ms ;
-     mongod --bind_ip_all --replSet rs0
+     mongod --bind_ip_all --replSet rs0 -logpath /var/log/mongod
      '
     deploy:
       replicas: 3
@@ -34,3 +34,15 @@ services:
         "
       '
 
+
+  client:
+    build: .
+    depends_on:
+      init-replica-set:
+        condition: service_started
+    volumes:
+      - .:/scripts:ro
+    entrypoint: |
+      bash -xc '
+        mongosh --host mongo mongosh -f /scripts/read-and-write.js
+      '
