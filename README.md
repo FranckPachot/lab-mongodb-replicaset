@@ -1,6 +1,6 @@
 # Lab with MongoDB Replica Set and Fake Network Latency
 
-In this lab, we explore the functionality of a MongoDB replica set under simulated network latency conditions using the `tc` tool. This setup allows developers and database administrators to understand read and write concerns without needing to deploy a geographically distributed cluster.
+In this lab, we explore the functionality of a MongoDB replica set under simulated network latency conditions using the `tc` tool, and simulated disk latency using `strace -e inject=fdatasync`. This setup allows developers and database administrators to understand read and write concerns without needing to deploy a geographically distributed cluster.
 
 ## Starting the Cluster
 
