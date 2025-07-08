@@ -27,7 +27,7 @@ services:
         condition: service_started
     entrypoint: |
       bash -xc '
-        sleep 5 ; 
+        sleep 3 ; 
         mongosh --host mongo --eval "
          rs.initiate( {_id: \"rs0\", members: [
           {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME}-mongo-1:27017\"},
@@ -35,7 +35,7 @@ services:
           {_id: 2, priority: 1, host: \"${COMPOSE_PROJECT_NAME}-mongo-3:27017\"}]
          });
         ";
-        sleep 5
+        sleep 1
       '
 
 
