@@ -34,7 +34,7 @@ function performRead(db, nodeName, expectedValue) {
  const collection = db.getCollection("testCollection");
  const readStart = Date.now();
  try {
-   const document = collection.find({ key: 'one' }).limit(1).next();
+   const document = collection.find({ key: process.env.HOSTNAME }).limit(1).next();
    const readEnd = Date.now();
    const readDuration = readEnd - readStart;
    const readValue = document ? document.value : '';
@@ -75,7 +75,7 @@ async function main() {
    const primaryNode = findPrimary(dbs);
    const primaryDb = dbs[primaryNode].getDB("test");
    const collection = primaryDb.getCollection("testCollection");
-   collection.updateOne( { key: 'one' }, { $set: { value: 0 } }, { upsert: true });
+   collection.updateOne( { key: process.env.HOSTNAME }, { $set: { value: 0 } }, { upsert: true });
  while (true) {
    const timestamp = (new Date()).toISOString();
 
@@ -84,7 +84,7 @@ async function main() {
      const writeStart = Date.now();
      try {
        const updateResult = collection.findOneAndUpdate(
-        { key: 'one', },
+        { key: process.env.HOSTNAME, },
         { $set: { value: loopNumber } },
         { upsert: true , returnDocument: 'before'}
        );
@@ -111,7 +111,7 @@ async function main() {
    });
    const results = await Promise.all(readPromises);
    const readOutputs = results.map(({ readOutput }) => readOutput).join(' ');
-   console.log(`${timestamp} Write ${writeOutput} Read ${readOutputs}`);
+   console.log(`${timestamp} Write ${writeOutput} Read ${readOutputs} client ${process.env.HOSTNAME}`);
 
  }
 }
