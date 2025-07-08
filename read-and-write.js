@@ -102,7 +102,7 @@ async function main() {
         );  
         const writeEnd = Date.now();  
         const writeDuration = writeEnd - writeStart;  
-        const previousValue=updateResult.value ? updateResult.value : 0;  
+        const previousValue= updateResult?.value ?? 0;
         writeOutput = `${loopNumber} to ${currentPrimaryNode} ${previousValue==loopNumber-1?"✅":"🚫"}(${padLeft(writeDuration.toString(),5)}ms)`;  
         loopNumber++;  
       } catch (error) {  
