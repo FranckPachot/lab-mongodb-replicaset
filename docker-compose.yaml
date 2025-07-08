@@ -27,13 +27,15 @@ services:
         condition: service_started
     entrypoint: |
       bash -xc '
-        sleep 5 ; mongosh --host mongo --eval "
+        sleep 5 ; 
+        mongosh --host mongo --eval "
          rs.initiate( {_id: \"rs0\", members: [
           {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME}-mongo-1:27017\"},
           {_id: 1, priority: 2, host: \"${COMPOSE_PROJECT_NAME}-mongo-2:27017\"},
           {_id: 2, priority: 1, host: \"${COMPOSE_PROJECT_NAME}-mongo-3:27017\"}]
          });
-        "
+        ";
+        sleep 5
       '
 
 
@@ -41,10 +43,10 @@ services:
     build: .
     depends_on:
       init-replica-set:
-        condition: service_started
+        condition: service_completed_successfully
     volumes:
       - .:/scripts:ro
     entrypoint: |
       bash -xc '
-        sleep 10 ; mongosh --host mongo mongosh -f /scripts/read-and-write.js
+        mongosh --host mongo mongosh -f /scripts/read-and-write.js
       '
