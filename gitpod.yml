@@ -1,0 +1,12 @@
+# .gitpod.yml  
+tasks:  
+  - name: Start Docker Compose
+        
+    command: |  
+      # Start PostgreSQL (single line)  
+      docker compose docker compose up --build
+  
+ports:  
+  - port: 27017  
+    onOpen: ignore  
+  
