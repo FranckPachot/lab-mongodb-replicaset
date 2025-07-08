@@ -2,16 +2,12 @@ services:
 
   mongo:
     build: .
-    expose:
-      - "27017:20017"
-    #ports:
-    #  - 27017-27100:27017
     volumes:
       - .:/scripts:ro
+    # inject 100ms network latency and 50ms disk sync latency 
     cap_add:
       - NET_ADMIN   # for tc
       - SYS_PTRACE  # for strace
-    # inject 100ms network latency and 50ms disk sync latency  
     command: |
      bash -xc '
      tc qdisc add dev eth0 root netem delay 100ms ;
