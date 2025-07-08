@@ -1,8 +1,8 @@
 const connections = {    
-  "🔢": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=true&w=majority',    
-  "1️⃣": 'mongodb://rs-mongo-1:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority',    
-  "2️⃣": 'mongodb://rs-mongo-2:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority',    
-  "3️⃣": 'mongodb://rs-mongo-3:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority',    
+  "🔢": 'mongodb://rs-mongo-1:27017,rs-mongo-2:27017,rs-mongo-3:27017/test?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=true&w=majority&journal=true',    
+  "1️⃣": 'mongodb://rs-mongo-1:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority&journal=true',    
+  "2️⃣": 'mongodb://rs-mongo-2:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority&journal=true',    
+  "3️⃣": 'mongodb://rs-mongo-3:27017/test?directConnection=true&connectTimeoutMS=900&serverSelectionTimeoutMS=500&socketTimeoutMS=300&w=majority&journal=true',    
 };    
   
 function padLeft(string, length) {    
