@@ -4,14 +4,14 @@ services:
     build: .
     volumes:
       - .:/scripts:ro
-    # inject 100ms network latency and 50ms disk sync latency 
+    # inject network latency and disk sync latency 
     cap_add:
       - NET_ADMIN   # for tc
       - SYS_PTRACE  # for strace
     command: |
      bash -xc '
-     tc qdisc add dev eth0 root netem delay 100ms ;
-     strace -e inject=fdatasync:delay_enter=50000 -f -Te trace=fdatasync -o /dev/null mongod --bind_ip_all --replSet rs0 --logpath /var/log/mongod
+     tc qdisc add dev eth0 root netem delay ${NETEM_DELAY_MS:-100}ms ;
+     strace -e inject=fdatasync:delay_enter=${FSYNC_DELAY_MS:-50}000 -f -Te trace=fdatasync -o /dev/null mongod --bind_ip_all --replSet rs0 --logpath /var/log/mongod
      '
     deploy:
       replicas: 3
@@ -26,9 +26,9 @@ services:
         sleep 3 ; 
         mongosh --host mongo --eval "
          rs.initiate( {_id: \"rs0\", members: [
-          {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME}-mongo-1:27017\"},
-          {_id: 1, priority: 2, host: \"${COMPOSE_PROJECT_NAME}-mongo-2:27017\"},
-          {_id: 2, priority: 1, host: \"${COMPOSE_PROJECT_NAME}-mongo-3:27017\"}]
+          {_id: 0, priority: 3, host: \"${COMPOSE_PROJECT_NAME:-rs}-mongo-1:27017\"},
+          {_id: 1, priority: 2, host: \"${COMPOSE_PROJECT_NAME:-rs}-mongo-2:27017\"},
+          {_id: 2, priority: 1, host: \"${COMPOSE_PROJECT_NAME:-rs}-mongo-3:27017\"}]
          });
         ";
         sleep 1
