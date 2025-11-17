@@ -13,10 +13,12 @@ lastTS = db.getSiblingDB('local').oplog.rs
 ;
   
 while (true) {  
-  let query = {};  
+ let query = {};  
   if (lastTS) {  
     query = { ts: { $gt: lastTS } };  
   }  
+
+ try {
   
   const cursor = db.getSiblingDB('local').oplog.rs  
     .find(query)  
@@ -31,7 +33,12 @@ while (true) {
       : "(no date)";  
   
     print(`${num}  ${db.hello().me} ${new Date().toISOString()} term=${doc.t} ns=${doc.ns} op=${doc.op} ${EJSON.stringify(doc)}`);  
+    sleep(1000);  
   }  
+ } catch (e) {
+  print(`Oplog read failed: ${e.message}...`);
+  continue;
+ }
   
   sleep(sleepMs);  
 }  
