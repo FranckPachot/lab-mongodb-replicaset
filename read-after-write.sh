@@ -41,3 +41,24 @@ async function main() {
 }
 main();
 JS
+
+
+exit
+
+
+
+
+
+cfg = rs.conf();  
+  
+// Member [0] is primary by default — leave it alone  
+// Member [1] and [2] become lagged, ineligible secondaries  
+  
+cfg.members[1].priority = 0;  
+cfg.members[1].secondaryDelaySecs = 10;  
+  
+cfg.members[2].priority = 0;  
+cfg.members[2].secondaryDelaySecs = 10;  
+  
+rs.reconfig(cfg);  
+
