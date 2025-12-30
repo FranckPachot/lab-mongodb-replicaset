@@ -180,4 +180,7 @@ docker compose exec -it mongo mongosh local --eval 'rs.printSecondaryReplication
 
 ```
 
+## Testing read after write
 
+
+Event-drive architecture may expect to read what was written but not yet acknowledged. The script `read-after-write.sh` shows an example where you can set the read and write concerns
